@@ -9,9 +9,8 @@ updates:
   - package-ecosystem: pnpm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 10
+      interval: monthly
+    open-pull-requests-limit: 5
     groups:
       production-minor-patch:
         dependency-type: production
@@ -27,6 +26,5 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
+      interval: monthly
+    open-pull-requests-limit: 2

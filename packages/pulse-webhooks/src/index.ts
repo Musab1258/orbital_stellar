@@ -2,11 +2,9 @@ import type { NormalizedEvent, Watcher, WatcherNotification } from "@orbital/pul
 import { createHmac, timingSafeEqual } from "crypto";
 
 import type { VerifyWebhookOptions, WebhookConfig } from "./types.js";
+import { DEFAULT_MAX_AGE_MS, DEFAULT_CLOCK_SKEW_MS } from "./types.js";
 export { verifyWebhookEdge } from "./edge.js";
 export type { VerifyWebhookOptions, WebhookConfig } from "./types.js";
-
-const DEFAULT_MAX_AGE_MS = 300_000;
-const DEFAULT_CLOCK_SKEW_MS = 30_000;
 
 type ResolvedWebhookConfig = Omit<Required<WebhookConfig>, "url"> & {
   urls: string[];

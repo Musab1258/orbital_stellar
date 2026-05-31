@@ -32,7 +32,6 @@ export type EngineStatus = {
   };
 };
 
-export type PaymentEventType = "payment.received" | "payment.sent";
 /** Passphrase strings for each supported Stellar network. */
 export const NETWORK_PASSPHRASES = {
   mainnet: "Public Global Stellar Network ; September 2015",

@@ -1,6 +1,6 @@
 import { Horizon } from "@stellar/stellar-sdk";
 import { Watcher } from "./Watcher.js";
-import { EngineAlreadyStartedError } from "./errors.js";
+import { EngineAlreadyStartedError, HorizonStreamError } from "./errors.js";
 import type {
   AccountCreatedEvent,
   AccountEventType,
@@ -17,6 +17,7 @@ import type {
   DataEventType,
   EngineStatus,
   LiquidityPoolDepositEvent,
+  LiquidityPoolReserve,
   LiquidityPoolWithdrawEvent,
   Network,
   NormalizedEvent,
@@ -249,8 +250,9 @@ export class EventEngine {
         this.route(event);
       },
       onerror: (error) => {
-        this.log.error(`[pulse-core] SSE error: ${error}`);
-        this.handleStreamError(error);
+        const wrappedError = error instanceof HorizonStreamError ? error : new HorizonStreamError(error);
+        this.log.error(`[pulse-core] SSE error: ${wrappedError}`);
+        this.handleStreamError(wrappedError);
       },
     };
 
@@ -318,26 +320,87 @@ export class EventEngine {
     return status === 429;
   }
 
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+  }
+
+  private getNumericField(record: Record<string, unknown>, field: string): number | undefined {
+    const value = record[field];
+    return typeof value === "number" ? value : undefined;
+  }
+
+  private getStringField(record: Record<string, unknown>, field: string): string | null {
+    const value = record[field];
+    return typeof value === "string" ? value : null;
+  }
+
+  private isHeaderMap(value: unknown): value is { get(name: string): string | null } {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      typeof (value as { get?: unknown }).get === "function"
+    );
+  }
+
   private extractStatus(error: unknown): number | undefined {
-    const e = error as Record<string, unknown>;
-    if (typeof e.status === "number") {
-      return e.status;
-    }
-    if (typeof e.statusCode === "number") {
-      return e.statusCode;
+    if (!this.isRecord(error)) {
+      return undefined;
     }
 
-    const response = e.response as Record<string, unknown> | undefined;
-    if (response) {
-      if (typeof response.status === "number") {
-        return response.status;
-      }
-      if (typeof response.statusCode === "number") {
-        return response.statusCode;
+    return (
+      this.getNumericField(error, "status") ??
+      this.getNumericField(error, "statusCode") ??
+      (this.isRecord(error.response)
+        ? this.getNumericField(error.response, "status") ??
+          this.getNumericField(error.response, "statusCode")
+        : undefined)
+    );
+  }
+
+  private getHeaderValue(error: unknown, headerName: string): string | null {
+    if (!this.isRecord(error)) {
+      return null;
+    }
+
+    const lowerName = headerName.toLowerCase();
+    const directHeader =
+      this.getStringField(error, headerName) ??
+      this.getStringField(error, lowerName);
+    if (directHeader) {
+      return directHeader;
+    }
+
+    const responseHeaders =
+      this.isRecord(error.response) && this.isRecord(error.response.headers)
+        ? error.response.headers
+        : undefined;
+
+    for (const headers of [error.headers, responseHeaders]) {
+      const value = this.getHeaderValueFromHeaders(headers, headerName);
+      if (value) {
+        return value;
       }
     }
 
-    return undefined;
+    return null;
+  }
+
+  private getHeaderValueFromHeaders(headers: unknown, headerName: string): string | null {
+    const lowerName = headerName.toLowerCase();
+
+    if (this.isHeaderMap(headers)) {
+      const value = headers.get(headerName) ?? headers.get(lowerName);
+      return typeof value === "string" ? value : null;
+    }
+
+    if (!this.isRecord(headers)) {
+      return null;
+    }
+
+    return (
+      this.getStringField(headers, headerName) ??
+      this.getStringField(headers, lowerName)
+    );
   }
 
   private parseRetryAfterMs(error: unknown): number | null {
@@ -353,48 +416,6 @@ export class EventEngine {
 
     const date = new Date(header).getTime();
     return Number.isNaN(date) ? null : Math.max(date - Date.now(), 0);
-  }
-
-  private getHeaderValue(error: unknown, headerName: string): string | null {
-    const e = error as Record<string, unknown>;
-    const directHeader = typeof e[headerName.toLowerCase()] === "string"
-      ? (e[headerName.toLowerCase()] as string)
-      : typeof e[headerName] === "string"
-      ? (e[headerName] as string)
-      : null;
-    if (directHeader) {
-      return directHeader;
-    }
-
-    const response = e.response as Record<string, unknown> | undefined;
-    const candidates = [e.headers, response?.headers];
-
-    for (const headers of candidates) {
-      if (!headers || typeof headers !== "object") {
-        continue;
-      }
-
-      if (typeof (headers as any).get === "function") {
-        const value = (headers as any).get(headerName) ??
-          (headers as any).get(headerName.toLowerCase());
-        if (typeof value === "string") {
-          return value;
-        }
-      }
-
-      const value =
-        typeof (headers as any)[headerName] === "string"
-          ? (headers as any)[headerName]
-          : typeof (headers as any)[headerName.toLowerCase()] === "string"
-          ? (headers as any)[headerName.toLowerCase()]
-          : null;
-
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-
-    return null;
   }
 
   private closeStream(): void {
@@ -835,7 +856,7 @@ export class EventEngine {
       type: "lp.deposited",
       source: r.source_account as string,
       pool_id: r.liquidity_pool_id as string,
-      reserves_deposited: r.reserves_deposited as Array<{ asset: string; amount: string }>,
+      reserves_deposited: r.reserves_deposited as LiquidityPoolReserve[],
       shares_received: r.shares_received as string,
       timestamp: r.created_at as string,
       raw,
@@ -875,7 +896,7 @@ export class EventEngine {
       type: "lp.withdrawn",
       source: r.source_account as string,
       pool_id: r.liquidity_pool_id as string,
-      reserves_received: r.reserves_received as Array<{ asset: string; amount: string }>,
+      reserves_received: r.reserves_received as LiquidityPoolReserve[],
       shares_redeemed: r.shares as string,
       timestamp: r.created_at as string,
       raw,

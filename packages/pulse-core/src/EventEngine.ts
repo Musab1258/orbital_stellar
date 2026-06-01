@@ -309,6 +309,11 @@ export class EventEngine {
   subscribeContract(id: string, options?: ContractSubscribeOptions): Watcher {
     const existing = this.contractRegistry.get(id);
     if (existing) {
+      if (options?.filter) {
+        this.log.warn(
+          `[pulse-core] subscribeContract() called for ${this.describeSubscription(id)} which already has an active watcher — filter option ignored.`
+        );
+      }
       return existing.watcher;
     }
 
@@ -317,9 +322,13 @@ export class EventEngine {
     if (options?.name !== undefined) {
       this.subscriptionNames.set(id, options.name);
     }
+    if (options?.filter) {
+      this.filters.set(id, options.filter);
+    }
     watcher.addStopHandler(() => {
       this.contractRegistry.delete(id);
       this.subscriptionNames.delete(id);
+      this.filters.delete(id);
     });
     this.contractRegistry.set(id, { watcher, filters });
     return watcher;

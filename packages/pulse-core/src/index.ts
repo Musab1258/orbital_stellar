@@ -526,6 +526,7 @@ export type ContractSubscriptionFilter = {
 /** Options for subscribeContract(). */
 export type ContractSubscribeOptions = {
   filters?: ContractSubscriptionFilter[];
+  filter?: (event: NormalizedEvent) => boolean;
   /** Optional human-friendly label for observability — appears in log lines and lifecycle notifications. */
   name?: string;
 };

@@ -11,34 +11,7 @@ export type { SorobanRpcErrorCode, SorobanRpcErrorOptions } from "./errors.js";
 export type { SorobanGetEventsResponse, SorobanRpcClientOptions, SorobanRpcEvent } from "./SorobanRpcClient.js";
 export { StrKey } from "@stellar/stellar-sdk";
 export { CursorStore } from "./CursorStore.js";
-export { PostgresCursorStore, PgLike } from "./PostgresCursorStore.js";
-export { cacheCursorStore } from "./cacheCursorStore.js";
-export { migrateCursors } from "./migrateCursors.js";
-export type { MigrateCursorsResult } from "./migrateCursors.js";
-export { RedisCursorStore, RedisLike } from "./RedisCursorStore.js";
-export { coalesceCursorStore, CoalescingStore } from "./coalesceCursorStore.js";
-export type { CoalescingStoreOptions } from "./coalesceCursorStore.js";
-export { evaluatePredicate, normalizeClaimPredicate, isClaimPredicateType } from "./claimPredicate.js";
-export type { ClaimPredicate } from "./claimPredicate.js";
-export type { StellarAmount } from "./amount.js";
-export { toBigInt } from "./amount.js";
-export {
-  isAccountAddress,
-  isMuxedAddress,
-  isContractAddress,
-  isStellarAddress,
-  toAccountAddress,
-  toMuxedAddress,
-  toContractAddress,
-} from "./address.js";
-export type {
-  AccountAddress,
-  MuxedAddress,
-  ContractAddress,
-  StellarAddress,
-} from "./address.js";
-
-import type { AccountAddress, ContractAddress, MuxedAddress } from "./address.js";
+export { MemoryCursorStore } from "./MemoryCursorStore.js";
 
 /** The Stellar network to connect to. */
 export type Network = "mainnet" | "testnet";

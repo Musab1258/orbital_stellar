@@ -1,18 +1,21 @@
 import { CursorStore } from "./CursorStore.js";
+import type { StellarAmount } from "./amount.js";
+import type { AccountAddress, MuxedAddress, ContractAddress } from "./address.js";
 export { SorobanRpcClient } from "./SorobanRpcClient.js";
 export type { SorobanRpcClientOptions } from "./SorobanRpcClient.js";
 export { EventEngine } from "./EventEngine.js";
 export { SorobanSubscriber } from "./SorobanSubscriber.js";
-export type { SorobanSubscriberOptions, ReconnectingPayload } from "./SorobanSubscriber.js";
-export { validateContractFilters } from "./contractFilters.js";
-export { Watcher } from "./Watcher.js";
-export { SorobanSubscriber } from "./SorobanSubscriber.js";
 export type {
   SorobanSubscriberOptions,
+  ReconnectingPayload,
   SorobanRpc,
   SorobanEvent,
   CursorStore as SorobanCursorStore,
 } from "./SorobanSubscriber.js";
+export { validateContractFilters } from "./contractFilters.js";
+export { Watcher } from "./Watcher.js";
+export type { StellarAmount } from "./amount.js";
+export type { AccountAddress, MuxedAddress, ContractAddress } from "./address.js";
 export { EngineAlreadyStartedError, HorizonStreamError } from "./errors.js";
 export { StrKey } from "@stellar/stellar-sdk";
 export { CursorStore } from "./CursorStore.js";
@@ -366,8 +369,6 @@ export type WatcherNotification = {
   emittedAt: string;
   /** The cursor value that was expired or lost, if applicable. */
   lostCursor?: string;
-  /** The source engine that encountered the expired cursor. */
-  source?: "horizon" | "soroban";
 };
 
 /**

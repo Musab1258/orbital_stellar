@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { NormalizedEvent } from "@orbital/pulse-core";
+import type { NormalizedEvent, PaymentEvent } from "@orbital/pulse-core";
 import { acquireEventConnection } from "./connectionPool.js";
 import { acquireWsConnection } from "./wsTransport.js";
 export { useStellarEventSuspense } from "./useStellarEventSuspense.js";
@@ -145,7 +145,10 @@ export function useStellarEvent<T extends NormalizedEvent = NormalizedEvent>(
   return state;
 }
 
-export type PaymentEvent = Extract<NormalizedEvent, { type: "payment.received" }>;
+// Re-export pulse-core's PaymentEvent. (It cannot be derived via
+// `Extract<NormalizedEvent, ...>` because NormalizedEvent is an intersection
+// with `{ timestampDate }`, over which Extract does not distribute.)
+export type { PaymentEvent };
 
 /**
  * Converts a Stellar decimal amount string (e.g. "12.3456789") to stroops
@@ -174,15 +177,18 @@ export function useStellarPayment(
     withCredentials?: boolean;
   }
 ) {
-  const base = useStellarEvent<PaymentEvent>(serverUrl, address, {
+  const base = useStellarEvent(serverUrl, address, {
     event: "payment.received",
-    initialEvent: options?.initialEvent,
+    initialEvent: (options?.initialEvent ?? undefined) as NormalizedEvent | undefined,
     filter: options?.filter,
     withCredentials: options?.withCredentials,
   });
+  // The "payment.received" stream only ever delivers PaymentEvents; narrow the
+  // generic NormalizedEvent so we can read `amount`.
+  const paymentEvent = (base.event ?? null) as PaymentEvent | null;
   const amountStroop: bigint | null =
-    base.event?.amount != null ? amountToStroop(base.event.amount) : null;
-  return { ...base, amountStroop };
+    paymentEvent?.amount != null ? amountToStroop(paymentEvent.amount) : null;
+  return { ...base, event: paymentEvent, amountStroop };
 }
 
 export function useStellarActivity<T extends NormalizedEvent = NormalizedEvent>(

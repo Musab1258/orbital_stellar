@@ -1904,13 +1904,14 @@ export function normalizeContractEvent(
       return null;
     }
     return {
-      type: "contract.invoked",
+      type: "contract_invoked",
+      id: String(e.id),
+      pagingToken: String(e.pagingToken),
       contractId: String(contractId),
-      function: String(rawRpcEvent.function),
-      args: Array.isArray(rawRpcEvent.args) ? (rawRpcEvent.args as unknown[]) : [],
       txHash: String(txHash),
       ledger: Number(ledger),
-      timestamp: typeof e.created_at === "string" ? e.created_at : new Date().toISOString(),
+      ledgerClosedAt: String(ledgerClosedAt),
+      inSuccessfulContractCall: Boolean(inSuccessfulContractCall),
       raw: rawRpcEvent,
     };
   }
@@ -1925,7 +1926,9 @@ export function normalizeContractEvent(
     }
 
     return {
-      type: "contract.emitted",
+      type: "contract_emitted",
+      id: String(e.id),
+      pagingToken: String(e.pagingToken),
       contractId: String(contractId),
       txHash: String(txHash),
       ledger: Number(ledger),
